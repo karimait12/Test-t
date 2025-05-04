@@ -1,18 +1,15 @@
-FROM node:18-alpine
+FROM node:18-bullseye  # Debian-based أكثر استقراراً
 
 WORKDIR /app
 
-# 1. تثبيت المتطلبات الأساسية
-RUN apk add --no-cache python3 make g++
-
-# 2. نسخ ملفات التبعية أولاً
+# 1. نسخ ملفات التبعية أولاً
 COPY package.json package-lock.json ./
 
-# 3. تثبيت التبعيات مع إصلاح المشاكل
-RUN npm install --legacy-peer-deps --omit=optional
+# 2. تثبيت التبعيات
+RUN npm install --omit=optional --legacy-peer-deps
 
-# 4. نسخ باقي الملفات
+# 3. نسخ باقي الملفات
 COPY . .
 
-# 5. الأمر التشغيلي
+# 4. الأمر التشغيلي
 CMD ["npm", "start"]
