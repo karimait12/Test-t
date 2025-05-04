@@ -1,12 +1,6 @@
-FROM node:18-slim
-
+FROM node:18-alpine
 WORKDIR /app
-
-# نسخ الملفات الأساسية (بشرط وجودها)
 COPY package*.json ./
-
-RUN npm install --omit=optional --legacy-peer-deps
-
+RUN npm install
 COPY . .
-
 CMD ["npm", "start"]
