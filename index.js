@@ -2,7 +2,7 @@ const { useSingleFileAuthState, default: makeWASocket } = require("@adiwajshing/
 const fs = require("fs");
 const path = require("path");
 
-// استخدم session/creds.json لحفظ بيانات الاتصال
+// المسار لملف الاعتماد
 const sessionPath = path.join(__dirname, "auth_info/creds.json");
 const { state, saveState } = useSingleFileAuthState(sessionPath);
 
@@ -35,7 +35,7 @@ async function startBot() {
                     }
                 }
             } catch (err) {
-                console.error("حدث خطأ أثناء معالجة الرسائل:", err.message, err.stack);
+                console.error("حدث خطأ أثناء معالجة الرسائل:", err.message);
             }
         });
 
