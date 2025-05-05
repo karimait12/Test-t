@@ -1,5 +1,5 @@
 const { default: makeWASocket, useSingleFileAuthState } = require('@adiwajshing/baileys');
-const { Boom } = require('@hapi/boom');
+
 const fs = require('fs');
 
 // إعداد المصادقة
