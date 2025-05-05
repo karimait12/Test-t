@@ -1,45 +1,59 @@
 // index.js
+const express = require('express');
 const { makeWASocket, useMultiFileAuthState } = require('baileys');
-const { unlinkSync } = require('fs');
 const path = require('path');
+const { unlinkSync } = require('fs');
 
-// مسار مجلد المصادقة (حيث ستُخزّن عدة ملفات: creds.json و keys.json)
 const AUTH_DIR = path.join(__dirname, 'auth_info');
+let sock;
 
-// دالة بدء البوت
-async function startBot() {
-  // هذه الدالة تُعيد لك state وحفظ التحديثات
+// 1. Initialize WhatsApp connection
+async function initWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true, // إذا لم تكن قد سجلت من قبل
+    printQRInTerminal: false, // Disable QR in production
   });
 
-  // حفظ بيانات الاعتماد عند أي تحديث
   sock.ev.on('creds.update', saveCreds);
-
-  sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect } = update;
+  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    console.log('WA connection:', connection);
     if (connection === 'close') {
-      const shouldReconnect = lastDisconnect.error?.output?.statusCode !== 401;
-      console.log('Connection closed. Reconnecting:', shouldReconnect);
-      if (shouldReconnect) startBot();
-      else unlinkSync(path.join(AUTH_DIR, 'creds.json')); 
-    } else if (connection === 'open') {
-      console.log('⚡️ Connected');
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== 401;
+      if (shouldReconnect) initWhatsApp();
+      else unlinkSync(path.join(AUTH_DIR, 'creds.json')); // Clear credentials if not reconnecting
     }
-  });
-
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type === 'notify') {
-      const msg = messages[0];
-      if (!msg.key.fromMe && msg.message) {
-        const jid = msg.key.remoteJid;
-        await sock.sendMessage(jid, { text: 'شكراً لرسالتك! نحن هنا لمساعدتك.' });
-      }
-    }
+    if (connection === 'open') console.log('✅ WhatsApp connected');
   });
 }
 
-startBot();
+initWhatsApp().catch(console.error);
+
+const app = express();
+app.use(express.json());
+
+// 2. POST /code endpoint to generate group invite code
+app.post('/code', async (req, res) => {
+  try {
+    const { number, id } = req.body;
+
+    // Optional: Verify the logged-in number matches the provided number
+    const me = sock.user?.id.split(':')[0]; // e.g., "2127xxxxxxxx"
+    if (number !== me) {
+      return res.status(403).json({ error: 'Unauthorized number' });
+    }
+
+    // Generate invite code for the provided group ID
+    const code = await sock.groupInviteCode(id);
+    res.json({ code });
+  } catch (err) {
+    console.error('Error generating invite code:', err);
+    res.status(500).json({ error: 'Could not fetch invite code' });
+  }
+});
+
+// 3. Serve static files (e.g., HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, 'public')));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
