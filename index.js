@@ -1,58 +1,53 @@
-const { default: makeWASocket, useMultiFileAuthState } = require('baileys');
+// index.js
+const { default: makeWASocket } = require('baileys');
+const useSingleFileAuthState = require('@debanjan-s/use-single-file-auth-state').default;
 const fs = require('fs');
 
 async function startBot() {
-  // تحديد مسار مجلد الجلسة
-  const sessionFolder = './auth_info'; // هنا نشير إلى مجلد بدلاً من ملف
+  // مسار ملف الجلسة
+  const sessionFile = './session.json';
 
-  // تحقق من وجود المجلد
-  if (!fs.existsSync(sessionFolder)) {
-    console.log(`المجلد ${sessionFolder} غير موجود! يجب إنشاء مجلد جديد.`);
-    return;
-  }
+  // هنا لو الملف غير موجود، سيُنشئ بوت جديد ويطبع QR
+  const printQR = !fs.existsSync(sessionFile);
 
-  // استخدام useMultiFileAuthState مع المجلد
-  const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
+  // تحميل أو إنشاء الجلسة في ملف واحد
+  const { state, saveState } = await useSingleFileAuthState(sessionFile);
 
-  // إنشاء الاتصال
+  // إنشاء الاتصال - إذا كان printQR=true سيُعطيك كود QR
   const sock = makeWASocket({
     auth: state,
+    printQRInTerminal: printQR,
   });
 
-  // حفظ بيانات الجلسة عند تحديثها
-  sock.ev.on('creds.update', saveCreds);
+  // كلما تغيرت بيانات الاعتماد، احفظها
+  sock.ev.on('creds.update', saveState);
 
   // الاستماع للرسائل
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return; // تجاهل الأنواع الأخرى
+    if (type !== 'notify') return;
     const msg = messages[0];
     const from = msg.key.remoteJid;
     const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-
-    // تحقق من وجود كلمة "تطبيق"
     if (text?.toLowerCase().includes('تطبيق')) {
       const filePath = './file-to-send.pdf';
-
       if (fs.existsSync(filePath)) {
         await sock.sendMessage(from, {
           document: { url: filePath },
           mimetype: 'application/pdf',
           fileName: 'تطبيق.pdf',
         });
-        console.log(`تم إرسال الملف إلى ${from}`);
-      } else {
-        console.log('الملف غير موجود!');
+        console.log(`✔️ أُرسل الملف إلى ${from}`);
       }
     }
   });
 
-  // التحقق من حالة الاتصال
+  // مراقبة الاتصال
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'close') {
-      console.log('⚠️ الاتصال أغلق، سيتم إعادة المحاولة...');
-      startBot(); // إعادة الاتصال
-    } else if (connection === 'open') {
+    if (connection === 'open') {
       console.log('✅ تم الاتصال بنجاح!');
+    } else if (connection === 'close') {
+      console.log('⚠️ الاتصال أغلق، إعادة تشغيل...');
+      startBot();
     }
   });
 }
