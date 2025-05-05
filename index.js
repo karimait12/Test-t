@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 // استخدم session/creds.json لحفظ بيانات الاتصال
-const sessionPath = path.join(__dirname, "session/creds.json");
+const sessionPath = path.join(__dirname, "auth_info/creds.json");
 const { state, saveState } = useSingleFileAuthState(sessionPath);
 
 async function startBot() {
