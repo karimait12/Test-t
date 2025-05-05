@@ -1,66 +1,50 @@
-const { useSingleFileAuthState, default: makeWASocket, DisconnectReason } = require("@adiwajshing/baileys");
+const { useSingleFileAuthState, makeWASocket, DisconnectReason } = require("@whiskeysockets/baileys");
 const fs = require("fs");
-const path = require("path");
 
-// إعداد ملف الجلسة
-const sessionPath = path.join(__dirname, "auth_info/creds.json");
-const sessionDir = path.dirname(sessionPath);
-if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
+// قراءة ملف الجلسة
+const sessionData = JSON.parse(fs.readFileSync("creds.json", "utf-8"));
+
+// تحويل بيانات الـ Buffer من JSON إلى كائنات Buffer فعلية
+function reviveBuffer(key, value) {
+  if (value && value.type === "Buffer" && value.data) {
+    return Buffer.from(value.data);
+  }
+  return value;
 }
-const { state, saveState } = useSingleFileAuthState(sessionPath);
 
-async function startBot() {
-    try {
-        console.log("بدء تشغيل البوت...");
+const session = JSON.parse(JSON.stringify(sessionData), reviveBuffer);
 
-        const sock = makeWASocket({
-            auth: state,
-            printQRInTerminal: true,
-        });
+// تهيئة العميل
+const socket = makeWASocket({
+  auth: {
+    creds: session,
+    keys: session // إذا كانت المفاتيح مُضمنة في الجلسة
+  },
+  printQRInTerminal: false,
+});
 
-        sock.ev.on("creds.update", saveState);
-
-        sock.ev.on("connection.update", (update) => {
-            const { connection, lastDisconnect } = update;
-            if (connection === "close") {
-                const shouldReconnect =
-                    lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log("تم فصل الاتصال. إعادة المحاولة:", shouldReconnect);
-                if (shouldReconnect) startBot();
-            } else if (connection === "open") {
-                console.log("تم الاتصال بواتساب!");
-            }
-        });
-
-        sock.ev.on("messages.upsert", async ({ messages, type }) => {
-            try {
-                if (type === "notify") {
-                    const msg = messages[0];
-                    if (!msg.key.fromMe && msg.message) {
-                        const sender = msg.key.remoteJid;
-                        const getMessageText = (message) =>
-                            message.conversation || message.extendedTextMessage?.text || "";
-                        const text = getMessageText(msg.message);
-
-                        console.log(`رسالة من ${sender}: ${text}`);
-
-                        if (text) {
-                            await sock.sendMessage(sender, { text: `شكراً على رسالتك: "${text}"! ♥️` });
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("حدث خطأ أثناء معالجة الرسائل:", err.message);
-            }
-        });
-
-        console.log("بوت واتساب يعمل الآن...");
-    } catch (err) {
-        console.error("حدث خطأ أثناء تشغيل البوت:", err.message, err.stack);
+// التعامل مع الأحداث
+socket.ev.on("connection.update", (update) => {
+  const { connection, lastDisconnect } = update;
+  if (connection === "close") {
+    if (lastDisconnect.error?.output?.statusCode === DisconnectReason.loggedOut) {
+      console.log("تم تسجيل الخروج!");
+      fs.unlinkSync("creds.json"); // حذف الجلسة إذا انتهت صلاحيتها
     }
-}
+  } else if (connection === "open") {
+    console.log("تم الاتصال بنجاح!");
+  }
+});
 
-startBot().catch((err) => {
-    console.error("حدث خطأ غير متوقع أثناء تشغيل البوت:", err.message, err.stack);
+// استقبال الرسائل
+socket.ev.on("messages.upsert", async ({ messages }) => {
+  const message = messages[0];
+  if (!message.key.fromMe) {
+    const sender = message.key.remoteJid;
+    const text = message.message.conversation || "";
+    
+    if (text.toLowerCase() === "مرحبا") {
+      await socket.sendMessage(sender, { text: "مرحبا بك في البوت!" });
+    }
+  }
 });
