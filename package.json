@@ -15,6 +15,6 @@
   "license": "MIT",
   "dependencies": {
     "@adiwajshing/baileys": "^4.7.0",
-    "@hapi/boom": "^10.0.1"
+    
   }
 }
