@@ -1,16 +1,18 @@
-const { default: makeWASocket, useSingleFileAuthState } = require('baileys');
+const { default: makeWASocket, useMultiFileAuthState } = require('baileys');
 const fs = require('fs');
 
 async function startBot() {
-  // تحقق إذا كان الملف موجودًا
+  // مسار ملف الجلسة
   const sessionFile = './session.json';
+
+  // تحقق من وجود الملف
   if (!fs.existsSync(sessionFile)) {
-    console.log("ملف الجلسة غير موجود، يجب إنشاء جلسة جديدة...");
+    console.log("ملف الجلسة غير موجود, يجب إنشاء جلسة جديدة.");
     return; // أو يمكنك إعادة الاتصال لجعل التطبيق يتصرف بشكل مناسب عند غياب الجلسة
   }
 
-  // تحميل بيانات الجلسة من الملف
-  const { state, saveCreds } = await useSingleFileAuthState(sessionFile);
+  // استخدام useMultiFileAuthState مع الجلسة المحفوظة
+  const { state, saveCreds } = await useMultiFileAuthState(sessionFile);
 
   // إنشاء الاتصال
   const sock = makeWASocket({
