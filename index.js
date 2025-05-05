@@ -1,4 +1,4 @@
-const { makeWASocket, useSingleFileAuthState } = require('@whiskeysockets/baileys');
+const { makeWASocket, useSingleFileAuthState } = require('baileys');
 const { unlinkSync } = require('fs');
 const path = require('path');
 
