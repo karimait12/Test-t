@@ -1,55 +1,63 @@
-// index.js
-const { default: makeWASocket } = require('baileys');
-const useSingleFileAuthState = require('@debanjan-s/use-single-file-auth-state').default;
+const { default: makeWASocket, useMultiFileAuthState } = require('baileys');
 const fs = require('fs');
 
 async function startBot() {
-  // مسار ملف الجلسة
-  const sessionFile = './session.json';
+  // Specify the session folder path
+  const sessionFolder = './auth_info'; // The folder that will contain the session files
 
-  // هنا لو الملف غير موجود، سيُنشئ بوت جديد ويطبع QR
-  const printQR = !fs.existsSync(sessionFile);
+  // Check if the session folder exists
+  if (!fs.existsSync(sessionFolder)) {
+    console.error(`The folder ${sessionFolder} does not exist! Please create it.`);
+    process.exit(1);  // Exit the process if folder is not found
+  }
 
-  // تحميل أو إنشاء الجلسة في ملف واحد
-  const { state, saveState } = await useSingleFileAuthState(sessionFile);
+  // Use the useMultiFileAuthState function to handle authentication
+  const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
 
-  // إنشاء الاتصال - إذا كان printQR=true سيُعطيك كود QR
+  // Create a socket connection to WhatsApp
   const sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: printQR,
+    auth: state,  // Using the authentication state
   });
 
-  // كلما تغيرت بيانات الاعتماد، احفظها
-  sock.ev.on('creds.update', saveState);
+  // Save credentials when they are updated
+  sock.ev.on('creds.update', saveCreds);
 
-  // الاستماع للرسائل
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
-    const msg = messages[0];
-    const from = msg.key.remoteJid;
-    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-    if (text?.toLowerCase().includes('تطبيق')) {
-      const filePath = './file-to-send.pdf';
-      if (fs.existsSync(filePath)) {
-        await sock.sendMessage(from, {
-          document: { url: filePath },
-          mimetype: 'application/pdf',
-          fileName: 'تطبيق.pdf',
-        });
-        console.log(`✔️ أُرسل الملف إلى ${from}`);
-      }
+  // Event listener for connection updates (for connection status)
+  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'close') {
+      console.log('⚠️ Connection closed, attempting to reconnect...');
+      startBot();  // Retry on connection close
+    } else if (connection === 'open') {
+      console.log('✅ Successfully connected!');
     }
   });
 
-  // مراقبة الاتصال
-  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'open') {
-      console.log('✅ تم الاتصال بنجاح!');
-    } else if (connection === 'close') {
-      console.log('⚠️ الاتصال أغلق، إعادة تشغيل...');
-      startBot();
+  // Event listener for incoming messages
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return; // Only process new notifications
+    const msg = messages[0];
+    const from = msg.key.remoteJid;
+    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+
+    // If the message contains the word "تطبيق" (Arabic for "application")
+    if (text?.toLowerCase().includes('تطبيق')) {
+      const filePath = './file-to-send.pdf';
+
+      // Check if the file exists before sending
+      if (fs.existsSync(filePath)) {
+        // Send the file as a document
+        await sock.sendMessage(from, {
+          document: { url: filePath },  // Path to the file
+          mimetype: 'application/pdf',  // MIME type of the file
+          fileName: 'تطبيق.pdf',  // File name to be sent
+        });
+        console.log(`File sent to ${from}`);
+      } else {
+        console.log('File not found!');
+      }
     }
   });
 }
 
+// Start the bot
 startBot();
