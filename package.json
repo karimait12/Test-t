@@ -14,6 +14,6 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "@adiwajshing/baileys": "^4.7.0"    
+    "@adiwajshing/baileys": "^7.2.1"    
   }
 }
