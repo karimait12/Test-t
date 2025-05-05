@@ -14,8 +14,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-"@adiwajshing/baileys": "npm:@rulzz2nd/baileys-emde@7.2.1",
-    "@adiwajshing/keyed-db": "^0.2.4",
-    "@hapi/boom": "^11.1.0"
+    "@adiwajshing/baileys": "^4.7.0",
+    "@hapi/boom": "^10.0.1"
   }
 }
