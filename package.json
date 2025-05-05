@@ -15,6 +15,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "baileys": "^6.7.16"
+    "baileys": "github:X-Electra/baileys",
+        "@adiwajshing/keyed-db": "^0.2.4"
   }
 }
