@@ -16,6 +16,7 @@
   "license": "MIT",
   "dependencies": {
     "baileys": "github:X-Electra/baileys",
-        "@adiwajshing/keyed-db": "^0.2.4"
+        "@adiwajshing/keyed-db": "^0.2.4",
+    "qrcode-terminal": "^0.12.0"
   }
 }
