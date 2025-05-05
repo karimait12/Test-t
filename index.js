@@ -1,4 +1,4 @@
-const { useSingleFileAuthState, makeWaSocket } = require("@adiwajshing/baileys");
+const { useSingleFileAuthState, default: makeWASocket } = require("@adiwajshing/baileys");
 const fs = require("fs");
 const path = require("path");
 
@@ -10,7 +10,7 @@ async function startBot() {
     console.log("تم تشغيل البوت بنجاح! انتظر الرسائل...");
 
     // إنشاء اتصال باستخدام Baileys
-    const sock = makeWaSocket({
+    const sock = makeWASocket({
         auth: state,
         printQRInTerminal: true, // طباعة QR في الطرفية إذا لزم الأمر
     });
@@ -24,7 +24,7 @@ async function startBot() {
             const msg = messages[0];
             if (!msg.key.fromMe && msg.message) {
                 const sender = msg.key.remoteJid;
-                const text = msg.message.conversation;
+                const text = msg.message.conversation || "";
 
                 console.log(`رسالة من ${sender}: ${text}`);
 
