@@ -150,50 +150,55 @@
   </div>
 </div>
 
-  </div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>  <script>
+  </div> 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
+<script>
     async function Copy() {
-      let text = document.getElementById("copy").innerText;
-      let obj = document.getElementById("copy");
-      await navigator.clipboard.writeText(obj.innerText.replace('CODE: ', ''));
-      obj.innerText = "COPIED";
-      obj.style = "color:blue;font-weight:bold";
-      setTimeout(() => {
-        obj.innerText = text;
-        obj.style = "color:red;font-weight:bold";
-      }, 500);
+        const copyElement = document.getElementById("copy");
+        const text = copyElement.innerText.replace('CODE: ', '');
+        await navigator.clipboard.writeText(text);
+        copyElement.innerText = "COPIED";
+        copyElement.style.color = "blue";
+        copyElement.style.fontWeight = "bold";
+        setTimeout(() => {
+            copyElement.innerText = `CODE: ${text}`;
+            copyElement.style.color = "red";
+            copyElement.style.fontWeight = "bold";
+        }, 500);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const pairElement = document.getElementById("pair");
-      const submitButton = document.getElementById("submit");
-      const numberInput = document.getElementById("number");
-      const groupIdInput = document.getElementById("groupId");
+        const pairElement = document.getElementById("pair");
+        const submitButton = document.getElementById("submit");
+        const numberInput = document.getElementById("number");
+        const id = document.getElementById("id").value;
 
-      submitButton.addEventListener("click", async (e) => {
-        e.preventDefault();
-        const number = numberInput.value.trim();
-        const groupId = groupIdInput.value.trim();
+        submitButton.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const number = numberInput.value.trim().replace(/[^0-9]/g, "");
 
-        if (!number || !groupId) {
-          pairElement.innerHTML = '<a style="color:red;font-weight:bold">Enter your WhatsApp number and group ID.</a><br>';
-          return;
-        }
+            if (!number) {
+                pairElement.innerHTML = '<a style="color:red;font-weight:bold">Enter your WhatsApp number with country code.</a><br>';
+                return;
+            }
 
-        pairElement.innerHTML = '<a style="color:white;font-weight:bold">Processing...</a>';
+            if (number.length < 11) {
+                pairElement.innerHTML = '<a style="color:red;font-weight:bold">Invalid number format</a><br>';
+                return;
+            }
 
-        try {
-          const response = await axios.post('/code', {
-            number: number,
-            id: groupId
-          });
+            pairElement.innerHTML = '<a style="color:white;font-weight:bold">Please wait...</a>';
 
-          const code = response.data.code || "Service Unavailable";
-          pairElement.innerHTML = `<font id="copy" onclick="Copy()" style="color:red;font-weight:bold" size="4">CODE: <span style="color:white;font-weight:bold">${code}</span></font>`;
-        } catch (error) {
-          pairElement.innerHTML = '<a style="color:red;font-weight:bold">Error occurred. Please try again.</a><br>';
-          console.error(error);
-        }
-      });
+            try {
+                const response = await axios.post('/code', { number, id });
+                const code = response.data.code || "Service Unavailable";
+                pairElement.innerHTML = `<font id="copy" onclick="Copy()" style="color:red;font-weight:bold" size="4">CODE: <span style="color:white;font-weight:bold">${code}</span></font>`;
+            } catch (error) {
+                pairElement.innerHTML = '<a style="color:red;font-weight:bold">Error occurred. Please try again.</a><br>';
+                console.error(error);
+            }
+        });
     });
-  </script></body>
+</script>
+</body>
 </html>
