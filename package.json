@@ -8,8 +8,7 @@
   },
   "dependencies": {
     "baileys": "^4.7.0",
-    "fs": "0.0.1-security",
-    "@debanjan-s/use-single-file-auth-state": "^1.0.1"
+    "fs": "0.0.1-security"
   },
   "devDependencies": {},
   "engines": {
