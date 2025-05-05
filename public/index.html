@@ -1,1 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Group Link</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
+    .container {
+      background: #fff;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .input-container {
+      margin-top: 20px;
+    }
+
+    input {
+      width: calc(100% - 2rem);
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    #copy {
+      color: #007BFF;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #copy:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>WhatsApp Group Code</h1>
+    <p>Enter your WhatsApp number and Group ID:</p>
+    <div class="input-container">
+      <input id="number" type="text" placeholder="Your WhatsApp Number (+212612345678)">
+      <input id="groupId" type="text" placeholder="Group ID">
+      <button id="generateCode">Generate Invite Code</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
+  <script>
+    document.getElementById("generateCode").addEventListener("click", async () => {
+      const number = document.getElementById("number").value.trim();
+      const groupId = document.getElementById("groupId").value.trim();
+      const resultDiv = document.getElementById("result");
+
+      if (!number || !groupId) {
+        resultDiv.innerHTML = `<span style="color: red;">Please enter both your number and group ID.</span>`;
+        return;
+      }
+
+      resultDiv.innerHTML = "Processing...";
+
+      try {
+        const response = await axios.post('/code', { number, id: groupId });
+        const code = response.data.code;
+
+        resultDiv.innerHTML = `
+          <p>Group Invite Code:</p>
+          <p id="copy">CODE: <span style="font-weight: bold; color: green;">${code}</span></p>
+        `;
+        document.getElementById("copy").addEventListener("click", async () => {
+          await navigator.clipboard.writeText(code);
+          alert("Code copied to clipboard!");
+        });
+      } catch (error) {
+        console.error(error);
+        resultDiv.innerHTML = `<span style="color: red;">Error generating code. Please try again.</span>`;
+      }
+    });
+  </script>
+</body>
+</html>
