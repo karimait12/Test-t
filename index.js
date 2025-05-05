@@ -1,54 +1,59 @@
+// index.js
 const { default: makeWASocket, useMultiFileAuthState } = require('baileys');
 const fs = require('fs');
 
 async function startBot() {
-  // إعداد بيانات المصادقة
+  // 1. تحميل بيانات الجلسة (state) من مجلد auth_info/
+  //    إذا وجدت ملفات الجلسة هناك، سيُستخدمُ token الموجود ولن يُطْلَبُ مسح QR.
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
 
-  // إنشاء اتصال البوت
+  // 2. إنشاء اتصال البوت بدون طباعة QR
   const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true, // طباعة كود QR في الطرفية
+    // يمكنك ضبط خيارات أخرى هنا إن احتجت، مثلاً:
+    // defaultQueryTimeoutMs: undefined
   });
 
-  // حفظ بيانات الاعتماد عند تحديثها
+  // 3. حفظ بيانات الجلسة عند أي تحديث (مثل تجديد الـ tokens)
   sock.ev.on('creds.update', saveCreds);
 
-  // الاستماع للرسائل الجديدة
+  // 4. الاستماع للرسائل الجديدة
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return; // تجاهل الأنواع الأخرى
+    if (type !== 'notify') return;
     const msg = messages[0];
-    const from = msg.key.remoteJid; // رقم المرسل
+    const from = msg.key.remoteJid;
     const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
 
-    // تحقق من وجود كلمة "تطبيق"
     if (text?.toLowerCase().includes('تطبيق')) {
       const filePath = './file-to-send.pdf';
-
-      // تحقق من وجود الملف
       if (fs.existsSync(filePath)) {
         await sock.sendMessage(from, {
-          document: { url: filePath }, // مسار الملف
-          mimetype: 'application/pdf', // نوع الملف
-          fileName: 'تطبيق.pdf', // اسم الملف
+          document: { url: filePath },
+          mimetype: 'application/pdf',
+          fileName: 'تطبيق.pdf',
         });
-        console.log(`تم إرسال الملف إلى ${from}`);
+        console.log(`✔️ أُرسل الملف إلى ${from}`);
       } else {
-        console.log('الملف غير موجود!');
+        console.warn('❌ الملف غير موجود:', filePath);
       }
     }
   });
 
-  // التحقق من حالة الاتصال
+  // 5. مراقبة حالة الاتصال
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'open') {
+      console.log('✅ تم الاتصال بنجاح دون مسح QR!');
+    }
     if (connection === 'close') {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== 401;
-      if (shouldReconnect) {
-        console.log('إعادة الاتصال...');
+      const status = lastDisconnect?.error?.output?.statusCode;
+      console.log('⚠️ الاتصال أغلق، كود الحالة:', status);
+      // إذا لم يكن logout (401) فنُعيد الاتصال
+      if (status !== 401) {
+        console.log('🔄 إعادة تشغيل البوت بعد انقطاع...');
         startBot();
+      } else {
+        console.error('🚫 تم تسجيل الخروج من الجلسة. يجب إنشاء جلسة جديدة.');
       }
-    } else if (connection === 'open') {
-      console.log('تم الاتصال بنجاح!');
     }
   });
 }
