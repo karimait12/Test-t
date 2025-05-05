@@ -15,6 +15,6 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^5.0.0"
+    "baileys": "^6.7.16"
   }
 }
