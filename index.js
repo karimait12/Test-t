@@ -21,24 +21,30 @@ async function startBot() {
 
         // الرد على الرسائل الواردة
         sock.ev.on("messages.upsert", async ({ messages, type }) => {
-            if (type === "notify") {
-                const msg = messages[0];
-                if (!msg.key.fromMe && msg.message) {
-                    const sender = msg.key.remoteJid;
-                    const text = msg.message.conversation || "";
+            try {
+                if (type === "notify") {
+                    const msg = messages[0];
+                    if (!msg.key.fromMe && msg.message) {
+                        const sender = msg.key.remoteJid;
+                        const text = msg.message.conversation || "";
 
-                    console.log(`رسالة من ${sender}: ${text}`);
+                        console.log(`رسالة من ${sender}: ${text}`);
 
-                    // إرسال رد
-                    await sock.sendMessage(sender, { text: `شكراً على رسالتك: "${text}"! ♥️` });
+                        // إرسال رد
+                        await sock.sendMessage(sender, { text: `شكراً على رسالتك: "${text}"! ♥️` });
+                    }
                 }
+            } catch (err) {
+                console.error("حدث خطأ أثناء معالجة الرسائل:", err.message, err.stack);
             }
         });
 
         console.log("بوت واتساب يعمل الآن...");
-    } catch (error) {
-        console.error("حدث خطأ أثناء تشغيل البوت:", error.message);
+    } catch (err) {
+        console.error("حدث خطأ أثناء تشغيل البوت:", err.message, err.stack);
     }
 }
 
-startBot();
+startBot().catch((err) => {
+    console.error("حدث خطأ غير متوقع أثناء تشغيل البوت:", err.message, err.stack);
+});
