@@ -5,10 +5,10 @@
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "build": "npm install --legacy-peer-deps"
+    "build": "npm install --omit=optional"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.1.3",
+    "@whiskeysockets/baileys": "6.0.1",  # إصدار بديل مؤكد
     "qrcode-terminal": "0.12.0"
   },
   "engines": {
