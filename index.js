@@ -7,6 +7,8 @@ const sessionPath = path.join(__dirname, "auth_info/creds.json");
 const { state, saveState } = useSingleFileAuthState(sessionPath);
 
 async function startBot() {
+    console.log("تم تشغيل البوت بنجاح! انتظر الرسائل...");
+
     // إنشاء اتصال باستخدام Baileys
     const sock = makeWaSocket({
         auth: state,
@@ -27,7 +29,7 @@ async function startBot() {
                 console.log(`رسالة من ${sender}: ${text}`);
 
                 // إرسال رد
-                await sock.sendMessage(sender, { text: "مرحبًا! تم ربط البوت بنجاح! ♥️" });
+                await sock.sendMessage(sender, { text: `شكراً على رسالتك: "${text}"! ♥️` });
             }
         }
     });
