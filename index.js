@@ -1,52 +1,45 @@
-const { makeWASocket, useSingleFileAuthState } = require('baileys');
+// index.js
+const { makeWASocket, useMultiFileAuthState } = require('baileys');
 const { unlinkSync } = require('fs');
 const path = require('path');
 
-// مسار ملف الجلسة
-const SESSION_FILE = path.join(__dirname, 'session.json');
+// مسار مجلد المصادقة (حيث ستُخزّن عدة ملفات: creds.json و keys.json)
+const AUTH_DIR = path.join(__dirname, 'auth_info');
 
-// إعداد حالة المصادقة
-const { state, saveState } = useSingleFileAuthState(SESSION_FILE);
-
-// إنشاء الاتصال
+// دالة بدء البوت
 async function startBot() {
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true, // يعرض كود QR إذا لم يتم تسجيل الدخول
-    });
+  // هذه الدالة تُعيد لك state وحفظ التحديثات
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-    // حفظ الجلسة عند التغيير
-    sock.ev.on('creds.update', saveState);
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: true, // إذا لم تكن قد سجلت من قبل
+  });
 
-    // الاستماع إلى الرسائل
-    sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        if (type === 'notify') {
-            const msg = messages[0];
-            if (!msg.key.fromMe && msg.message) {
-                const sender = msg.key.remoteJid;
-                const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+  // حفظ بيانات الاعتماد عند أي تحديث
+  sock.ev.on('creds.update', saveCreds);
 
-                console.log(`رسالة جديدة من ${sender}: ${text}`);
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update;
+    if (connection === 'close') {
+      const shouldReconnect = lastDisconnect.error?.output?.statusCode !== 401;
+      console.log('Connection closed. Reconnecting:', shouldReconnect);
+      if (shouldReconnect) startBot();
+      else unlinkSync(path.join(AUTH_DIR, 'creds.json')); 
+    } else if (connection === 'open') {
+      console.log('⚡️ Connected');
+    }
+  });
 
-                // الرد التلقائي
-                await sock.sendMessage(sender, { text: 'شكراً لرسالتك! نحن هنا لمساعدتك.' });
-            }
-        }
-    });
-
-    // الاستماع إلى أحداث الانفصال
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== 401; // إعادة الاتصال إذا لم يكن بسبب خطأ في المصادقة
-            console.log('تم قطع الاتصال، جارٍ إعادة المحاولة...', shouldReconnect);
-            if (shouldReconnect) startBot();
-            else unlinkSync(SESSION_FILE); // حذف ملف الجلسة عند انتهاء الجلسة
-        } else if (connection === 'open') {
-            console.log('تم الاتصال بنجاح!');
-        }
-    });
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type === 'notify') {
+      const msg = messages[0];
+      if (!msg.key.fromMe && msg.message) {
+        const jid = msg.key.remoteJid;
+        await sock.sendMessage(jid, { text: 'شكراً لرسالتك! نحن هنا لمساعدتك.' });
+      }
+    }
+  });
 }
 
-// بدء البوت
 startBot();
