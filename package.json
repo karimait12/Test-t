@@ -1,17 +1,20 @@
 {
   "name": "whatsapp-bot",
   "version": "1.0.0",
-  "main": "index.js",
-  "type": "commonjs",
+  "description": "WhatsApp bot using Baileys to send a file when a specific keyword is received.",
+  "main": "bot.js",
   "scripts": {
-    "start": "node index.js",
-    "build": "npm install --omit=optional"
+    "start": "node bot.js"
   },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "6.0.1",
-    "qrcode-terminal": "0.12.0"
-  },
-  "engines": {
-    "node": "18.x"
+    "@adiwajshing/baileys": "^4.7.0",
+    "@hapi/boom": "^11.1.0"
   }
 }
