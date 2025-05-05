@@ -1,63 +1,52 @@
-const { default: makeWASocket, useMultiFileAuthState } = require('baileys');
-const fs = require('fs');
+const { makeWASocket, useSingleFileAuthState } = require('@whiskeysockets/baileys');
+const { unlinkSync } = require('fs');
+const path = require('path');
 
+// مسار ملف الجلسة
+const SESSION_FILE = path.join(__dirname, 'session.json');
+
+// إعداد حالة المصادقة
+const { state, saveState } = useSingleFileAuthState(SESSION_FILE);
+
+// إنشاء الاتصال
 async function startBot() {
-  // Specify the session folder path
-  const sessionFolder = './auth_info'; // The folder that will contain the session files
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: true, // يعرض كود QR إذا لم يتم تسجيل الدخول
+    });
 
-  // Check if the session folder exists
-  if (!fs.existsSync(sessionFolder)) {
-    console.error(`The folder ${sessionFolder} does not exist! Please create it.`);
-    process.exit(1);  // Exit the process if folder is not found
-  }
+    // حفظ الجلسة عند التغيير
+    sock.ev.on('creds.update', saveState);
 
-  // Use the useMultiFileAuthState function to handle authentication
-  const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
+    // الاستماع إلى الرسائل
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (type === 'notify') {
+            const msg = messages[0];
+            if (!msg.key.fromMe && msg.message) {
+                const sender = msg.key.remoteJid;
+                const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
-  // Create a socket connection to WhatsApp
-  const sock = makeWASocket({
-    auth: state,  // Using the authentication state
-  });
+                console.log(`رسالة جديدة من ${sender}: ${text}`);
 
-  // Save credentials when they are updated
-  sock.ev.on('creds.update', saveCreds);
+                // الرد التلقائي
+                await sock.sendMessage(sender, { text: 'شكراً لرسالتك! نحن هنا لمساعدتك.' });
+            }
+        }
+    });
 
-  // Event listener for connection updates (for connection status)
-  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'close') {
-      console.log('⚠️ Connection closed, attempting to reconnect...');
-      startBot();  // Retry on connection close
-    } else if (connection === 'open') {
-      console.log('✅ Successfully connected!');
-    }
-  });
-
-  // Event listener for incoming messages
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return; // Only process new notifications
-    const msg = messages[0];
-    const from = msg.key.remoteJid;
-    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-
-    // If the message contains the word "تطبيق" (Arabic for "application")
-    if (text?.toLowerCase().includes('تطبيق')) {
-      const filePath = './file-to-send.pdf';
-
-      // Check if the file exists before sending
-      if (fs.existsSync(filePath)) {
-        // Send the file as a document
-        await sock.sendMessage(from, {
-          document: { url: filePath },  // Path to the file
-          mimetype: 'application/pdf',  // MIME type of the file
-          fileName: 'تطبيق.pdf',  // File name to be sent
-        });
-        console.log(`File sent to ${from}`);
-      } else {
-        console.log('File not found!');
-      }
-    }
-  });
+    // الاستماع إلى أحداث الانفصال
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== 401; // إعادة الاتصال إذا لم يكن بسبب خطأ في المصادقة
+            console.log('تم قطع الاتصال، جارٍ إعادة المحاولة...', shouldReconnect);
+            if (shouldReconnect) startBot();
+            else unlinkSync(SESSION_FILE); // حذف ملف الجلسة عند انتهاء الجلسة
+        } else if (connection === 'open') {
+            console.log('تم الاتصال بنجاح!');
+        }
+    });
 }
 
-// Start the bot
+// بدء البوت
 startBot();
