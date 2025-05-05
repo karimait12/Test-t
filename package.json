@@ -1,19 +1,20 @@
 {
   "name": "whatsapp-bot",
   "version": "1.0.0",
-  "description": "A WhatsApp bot using Baileys",
-  "main": "index.js",
+  "description": "A simple WhatsApp bot using Baileys library for auto-reply.",
+  "main": "bot.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node bot.js"
   },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "auto-reply"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "baileys": "^4.7.0",
-    "fs": "0.0.1-security"
-  },
-  "devDependencies": {},
-  "engines": {
-    "node": ">=16.0.0"
-  },
-  "author": "",
-  "license": "ISC"
+    "@whiskeysockets/baileys": "^5.0.0"
+  }
 }
