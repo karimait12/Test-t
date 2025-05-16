@@ -4,7 +4,7 @@ const fs = require("fs");
 // قراءة ملف الجلسة
 let sessionData;
 try {
-  sessionData = JSON.parse(fs.readFileSync("creds.json", "utf-8"));
+  sessionData = JSON.parse(fs.readFileSync("auth_info", "utf-8"));
 } catch (err) {
   console.log("لم يتم العثور على ملف الجلسة. سيتم إنشاء جلسة جديدة عند الاتصال.");
   sessionData = null;
